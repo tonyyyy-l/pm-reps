@@ -115,5 +115,6 @@
 - Verification: production build passed and all eight automated tests passed, including the DeepSeek endpoint, model, environment-key, and no-committed-credential checks.
 - Repository remediation: because GitHub still exposed an unreachable old commit by direct SHA after a force-push, deleted the empty public repository and recreated it from the sanitized root commit; the old SHA then returned `404`.
 - Remote verification: the recreated repository contains one `main` commit, the local and remote SHAs match, and current source and history scans contain no direct personal identifiers or committed credentials.
-- Next step: redeploy the validated site without a model secret; configure `DEEPSEEK_API_KEY` later through hosted runtime settings, never Git.
-- Status: implementation and GitHub privacy remediation complete; deployment in progress.
+- Deployment result: published the validated DeepSeek-ready build as a new owner-only Sites version with no model secret configured.
+- Next step: configure `DEEPSEEK_API_KEY` through hosted runtime settings, never Git, then run the planned live-model quality corpus before making model-quality claims.
+- Status: provider migration, GitHub privacy remediation, automated verification, and private deployment complete.
