@@ -111,7 +111,9 @@
 - Runtime contract: use server-only `DEEPSEEK_API_KEY`, JSON mode, a bounded retry, local schema and evidence-ID validation, and the existing fail-closed rules fallback when no credential is configured.
 - Credential status: no DeepSeek credential was available, so live model execution remains unavailable and was not simulated.
 - Privacy correction: replaced direct personal identifiers in public source content with generic learner and deployment descriptions.
-- Git correction: the public branch must be rebuilt with generic commit-author metadata so historical source content and author metadata do not retain personal identifiers.
+- Git correction: rebuilt the public branch as a single sanitized root commit with generic commit-author metadata.
 - Verification: production build passed and all eight automated tests passed, including the DeepSeek endpoint, model, environment-key, and no-committed-credential checks.
-- Next step: complete the history rewrite, force-update only the public `main` branch, verify the remote tree and history, then redeploy the validated site without a model secret.
-- Status: implementation verified; public-history remediation and deployment in progress.
+- Repository remediation: because GitHub still exposed an unreachable old commit by direct SHA after a force-push, deleted the empty public repository and recreated it from the sanitized root commit; the old SHA then returned `404`.
+- Remote verification: the recreated repository contains one `main` commit, the local and remote SHAs match, and current source and history scans contain no direct personal identifiers or committed credentials.
+- Next step: redeploy the validated site without a model secret; configure `DEEPSEEK_API_KEY` later through hosted runtime settings, never Git.
+- Status: implementation and GitHub privacy remediation complete; deployment in progress.
