@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/evaluation.v1.schema.json",
+  "title": "PM Reps validated evaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evaluationId",
+    "attemptId",
+    "rubricVersion",
+    "evaluatorVersion",
+    "createdAt",
+    "dimensions",
+    "factualClaims",
+    "overallSummary",
+    "skillMapEligible"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "evaluation.v1" },
+    "evaluationId": { "type": "string", "minLength": 1 },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "rubricVersion": { "type": "string", "minLength": 1 },
+    "evaluatorVersion": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "dimensions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "rating", "rationale", "evidenceIds", "improvementPrompt", "confidence"],
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "enum": ["user_problem", "evidence_use", "metric_validity", "ai_system_awareness", "rollout_judgment"]
+          },
+          "rating": { "type": "string", "enum": ["strong", "supported", "partial", "missing"] },
+          "rationale": { "type": "string", "minLength": 1 },
+          "evidenceIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "improvementPrompt": { "type": "string", "minLength": 1 },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      }
+    },
+    "factualClaims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "status", "evidenceIds"],
+        "properties": {
+          "text": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["supported", "insufficient_evidence"] },
+          "evidenceIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "overallSummary": { "type": "string", "minLength": 1 },
+    "skillMapEligible": { "const": true }
+  }
+}

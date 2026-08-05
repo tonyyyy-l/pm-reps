@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/decision-card-public.v1.schema.json",
+  "title": "PM Reps public Decision Card",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "slug",
+    "publishedAt",
+    "displayName",
+    "case",
+    "decision",
+    "revisionSummary",
+    "source"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "decision-card-public.v1" },
+    "slug": { "type": "string", "minLength": 16, "maxLength": 128 },
+    "publishedAt": { "type": "string", "format": "date-time" },
+    "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "decisionType"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "decisionType": {
+          "type": "string",
+          "enum": ["user_problem", "product_priority", "metrics_eval", "ai_failure_mode", "rollout"]
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "reasoning", "assumptions"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "reasoning": { "type": "string", "minLength": 1 },
+        "assumptions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "revisionSummary": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "canonicalUrl", "publishedAt", "retrievedAt"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "canonicalUrl": { "type": "string", "format": "uri" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "retrievedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

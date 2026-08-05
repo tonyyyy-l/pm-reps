@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/case-reveal.v1.schema.json",
+  "title": "PM Reps post-commit case reveal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "caseId",
+    "companyName",
+    "productName",
+    "source",
+    "realOutcome",
+    "evidenceCommentary",
+    "referenceTradeoffs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "case-reveal.v1" },
+    "caseId": { "type": "string", "minLength": 1 },
+    "companyName": { "type": "string", "minLength": 1 },
+    "productName": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "canonicalUrl", "publishedAt", "retrievedAt"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "canonicalUrl": { "type": "string", "format": "uri" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "retrievedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "realOutcome": { "type": "string", "minLength": 1 },
+    "evidenceCommentary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidenceId", "classification", "text"],
+        "properties": {
+          "evidenceId": { "type": "string", "minLength": 1 },
+          "classification": { "type": "string", "enum": ["fact", "inference"] },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "referenceTradeoffs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

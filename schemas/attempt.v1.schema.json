@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/attempt.v1.schema.json",
+  "title": "PM Reps private attempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "attemptId",
+    "caseId",
+    "status",
+    "startedAt",
+    "originalResponses",
+    "revisionResponses"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "attempt.v1" },
+    "attemptId": { "type": "string", "minLength": 1 },
+    "caseId": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "committed", "evaluating", "evaluation_failed", "feedback_ready", "revised", "completed"]
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "committedAt": { "type": ["string", "null"], "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" },
+    "originalResponses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/response" }
+    },
+    "revisionResponses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/response" }
+    },
+    "keepOriginalRationale": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["promptId", "selectedChoiceId", "rationale"],
+      "properties": {
+        "promptId": { "type": "string", "minLength": 1 },
+        "selectedChoiceId": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

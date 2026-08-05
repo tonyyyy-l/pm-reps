@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/case-public.v1.schema.json",
+  "title": "PM Reps pre-commit case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "caseId",
+    "estimatedMinutes",
+    "decisionType",
+    "scenario",
+    "evidence",
+    "constraints",
+    "prompts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "case-public.v1" },
+    "caseId": { "type": "string", "minLength": 1 },
+    "estimatedMinutes": { "type": "integer", "minimum": 1, "maximum": 30 },
+    "decisionType": {
+      "type": "string",
+      "enum": ["user_problem", "product_priority", "metrics_eval", "ai_failure_mode", "rollout"]
+    },
+    "scenario": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidenceId", "kind", "text"],
+        "properties": {
+          "evidenceId": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["fact", "metric", "constraint"] },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "prompts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["promptId", "dimension", "question", "choices", "rationaleRequired"],
+        "properties": {
+          "promptId": { "type": "string", "minLength": 1 },
+          "dimension": {
+            "type": "string",
+            "enum": ["user_problem", "evidence_use", "metric_validity", "ai_system_awareness", "rollout_judgment"]
+          },
+          "question": { "type": "string", "minLength": 1 },
+          "choices": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["choiceId", "label"],
+              "properties": {
+                "choiceId": { "type": "string", "minLength": 1 },
+                "label": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "rationaleRequired": { "const": true }
+        }
+      }
+    }
+  }
+}
