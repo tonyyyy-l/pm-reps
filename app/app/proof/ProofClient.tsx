@@ -93,6 +93,13 @@ export function ProofClient() {
           <h3>What changed after feedback</h3>
           <p>{snapshot.revisionSummary}</p>
         </section>
+        {snapshot.comparison ? (
+          <section>
+            <h3>What the company chose or shipped</h3>
+            <p>{snapshot.comparison.whatCompanyChoseOrShipped}</p>
+            <small>{snapshot.comparison.note}</small>
+          </section>
+        ) : null}
         <section className="proof-source">
           <h3>Verified source</h3>
           <p>{snapshot.source.title}</p>

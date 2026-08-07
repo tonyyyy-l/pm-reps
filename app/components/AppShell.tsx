@@ -1,13 +1,27 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- Plain document navigation avoids the vinext client-hook failure previously observed in this project. */
 import type { ReactNode } from "react";
 
 type AppSection = "today" | "feedback" | "candidates" | "skills" | "proof";
 
-const navItems: Array<{ section: AppSection; label: string; href: string }> = [
-  { section: "today", label: "Today’s Rep", href: "/app/today" },
-  { section: "feedback", label: "Feedback", href: "/app/feedback" },
-  { section: "candidates", label: "Case Inbox", href: "/app/candidates" },
-  { section: "skills", label: "Skill Map", href: "/app/skills" },
-  { section: "proof", label: "Public Proof", href: "/app/proof" },
+const navGroups: Array<{
+  label: string;
+  items: Array<{ section: AppSection; label: string; description: string; href: string }>;
+}> = [
+  {
+    label: "PRACTICE",
+    items: [
+      { section: "today", label: "Today’s Rep", description: "Make today’s decisions", href: "/app/today" },
+      { section: "feedback", label: "Feedback", description: "Review and revise", href: "/app/feedback" },
+      { section: "candidates", label: "Case Inbox", description: "Choose your next practice", href: "/app/candidates" },
+    ],
+  },
+  {
+    label: "PROGRESS & PROOF",
+    items: [
+      { section: "skills", label: "Skill Map", description: "See recurring patterns", href: "/app/skills" },
+      { section: "proof", label: "Public Proof", description: "Publish selected work", href: "/app/proof" },
+    ],
+  },
 ];
 
 export function AppShell({
@@ -31,16 +45,21 @@ export function AppShell({
 
       <div className="product-layout">
         <nav className="product-nav" aria-label="PM Reps workspace">
-          <p className="nav-heading">WORKSPACE</p>
-          {navItems.map((item) => (
-            <a
-              key={item.section}
-              className="nav-item"
-              data-active={active === item.section ? "true" : "false"}
-              href={item.href}
-            >
-              {item.label}
-            </a>
+          {navGroups.map((group) => (
+            <section className="nav-group" key={group.label}>
+              <p className="nav-heading">{group.label}</p>
+              {group.items.map((item) => (
+                <a
+                  key={item.section}
+                  className="nav-item"
+                  data-active={active === item.section ? "true" : "false"}
+                  href={item.href}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.description}</small>
+                </a>
+              ))}
+            </section>
           ))}
           <div className="nav-footer">
             <span>PM REPS MVP</span>

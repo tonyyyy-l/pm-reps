@@ -80,9 +80,9 @@ Protected routes require the server-provided authenticated user identity. Client
 
 ### 4.2 Case service
 
-- Stores the full internal case, including company, source, real outcome, and reference trade-offs.
-- Returns only a `case-public.v1` projection before commitment.
-- Returns `case-reveal.v1` only after the server confirms an owned committed attempt.
+- Stores the full internal case, including company, source, what shipped, and reference trade-offs.
+- Returns only a `case-public.v2` projection before commitment.
+- Returns `case-reveal.v2` only after the server confirms an owned committed attempt.
 - Does not serialize the full case into page props, client bundles, hidden DOM, or browser storage.
 
 ### 4.3 Attempt service
@@ -122,10 +122,10 @@ The route names are provisional contracts for Step 3 and later implementation.
 
 | Method and route | Input contract | Output contract | Required state |
 | --- | --- | --- | --- |
-| `GET /api/cases/today` | None | `case-public.v1` | Authenticated |
+| `GET /api/cases/today` | None | `case-public.v2` | Authenticated |
 | `POST /api/attempts` | Case ID | `attempt.v1` | Authenticated |
 | `PUT /api/attempts/:id/draft` | Prompt responses | `attempt.v1` | Owned draft |
-| `POST /api/attempts/:id/commit` | Idempotency key | `attempt.v1` + `case-reveal.v1` | Owned draft |
+| `POST /api/attempts/:id/commit` | Idempotency key | `attempt.v1` + `case-reveal.v2` | Owned draft |
 | `POST /api/attempts/:id/evaluate` | Idempotency key | `evaluation.v1` or fail-closed error | Owned committed attempt |
 | `POST /api/attempts/:id/revise` | Revision responses and idempotency key | `attempt.v1` | Valid feedback available |
 | `POST /api/attempts/:id/complete` | Idempotency key | `attempt.v1` | Valid revision or keep-original rationale |
@@ -156,6 +156,8 @@ Planned logical tables:
 | `decision_cards` | Private preview and publication status | Public data generated through allowlist projection |
 | `public_decision_card_snapshots` | Anonymous public representation | Contains no join path to private user data |
 | `source_ingestion_runs` | Later AI HOT ingestion audit | Added in Step 6, not required for fixed cases |
+| `candidate_product_pool` | Owner-scoped, filtered AI product practice queue | A source item keeps one lifecycle status per owner |
+| `candidate_pool_sync_state` | AI HOT ETag and sync throttle | One row per owner |
 
 Indexes will be added only for implemented query patterns. Likely candidates are owned attempt history, active case lookup, published slug lookup, and completed skill observations. The actual SQLite schema and query-plan verification belong to the implementation steps.
 
@@ -182,10 +184,10 @@ Forbidden transitions fail without mutating data. A card publication state is se
 The leakage boundary is enforced by server projection, not CSS or client-side hiding.
 
 1. The browser requests today's case.
-2. The server loads the internal case and returns only fields allowed by `case-public.v1`.
+2. The server loads the internal case and returns only fields allowed by `case-public.v2`.
 3. The learner saves drafts against an owned attempt.
 4. Commit runs in one database transaction: validate state, copy draft responses into immutable original rows, record commit time, and change state to `committed`.
-5. Only after the transaction succeeds does the server return the `case-reveal.v1` projection.
+5. Only after the transaction succeeds does the server return the `case-reveal.v2` projection.
 6. Refreshing or opening another browser can reveal the source only when the server sees the same user owns a committed attempt.
 
 The pre-commit payload, HTML, application bundle, logs returned to the browser, and analytics events must contain none of the prohibited reveal fields.
@@ -195,16 +197,24 @@ The pre-commit payload, HTML, application bundle, logs returned to the browser, 
 ### AI HOT
 
 - Runs server-side only.
-- Uses the public read-only API and preserves the canonical permalink and published time.
+- Uses the v1 public read-only selected `ai-products` feed and preserves the canonical permalink and published time.
+- Uses the paginated selected snapshot only for explicit owner-scoped historical backfills; it completes every page before filtering by the AI HOT timeline date.
+- Saves eligible products before case generation in an owner-scoped D1 pool; browser storage is not authoritative.
+- Applies a deterministic practice-fit gate requiring sufficient source material, at least two product-judgment dimensions (user problem, product priority, metric validity, AI-system risk, or rollout judgment), and a minimum fit score of 75.
+- Excludes pure financing, acquisition, stock, earnings, research-paper, benchmark, parameter-count, and training-method items when they do not contain enough product-decision depth.
+- Selects the next `queued` product with a database random order. An atomic status update claims it as `generating`, preventing two requests from selecting the same item.
+- Marks the source item `completed` only after the learner completes the post-feedback revision. Completed items never re-enter `queued` during later syncs.
 - Treats all source content as untrusted text.
 - Does not execute or follow instructions contained in source content.
-- Stores a minimal evidence pack and provenance rather than mirroring unrelated source fields.
-- Is introduced only in Step 6 after the fixed-case workflow passes acceptance checks.
+- Uses AI HOT summaries only for discovery and fetches the linked original source before generation.
+- Stores a minimal evidence pack, exact supporting quotations, and verification provenance rather than mirroring the full source.
+- Rejects missing publication metadata, unreadable sources, unsafe URLs, and non-text responses.
 
 ### Model provider
 
 - API credentials remain server-side and are supplied through hosted environment configuration.
-- Generator and evaluator are separate calls with different prompts and contracts.
+- DeepSeek V4 Flash runs distinct evidence-isolation, blind-generation, separate-reviewer, and learner-evaluation operations with separate prompts and contracts.
+- The response evaluator remains a separate DeepSeek call with a different prompt and contract.
 - Structured output is validated before persistence.
 - A single bounded retry may repair invalid structure; a second failure becomes a visible fail-closed state.
 - Model failure never fabricates feedback, marks a rep complete, updates skills, or publishes content.
@@ -231,7 +241,10 @@ Operational records retain correlation ID, user-scoped opaque ID, attempt ID, co
 - Invalid input contract: return `400` with field-level errors.
 - Invalid model output: store an audit record, show evaluation unavailable, and keep the attempt ineligible.
 - Missing evidence citation: reject the evaluation.
+- Missing the DeepSeek credential: preserve the current case and return a configuration-required state.
+- Separate reviewer rejection or inconsistent reviewer output: preserve the current case and record only an error class.
 - AI HOT unavailable: keep the last verified cases; do not invent or backfill an unverified case.
+- Empty eligible pool: return a visible exhausted state; never weaken the practice-fit filter silently.
 - Publish projection failure: keep the card private and return no public slug.
 
 ## 12. Deferred decisions
@@ -243,7 +256,7 @@ The following are deliberately deferred until evidence requires them:
 - multi-user organizations;
 - background queues;
 - semantic search or vector storage;
-- multiple model providers;
+- additional model-provider comparisons;
 - native mobile applications; and
 - automated social sharing.
 

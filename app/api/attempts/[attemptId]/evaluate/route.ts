@@ -3,8 +3,7 @@ import { getDb } from "@/db";
 import { ensureSchema } from "@/db/ensure-schema";
 import { attempts } from "@/db/schema";
 import { evaluateAttempt } from "@/app/lib/evaluation";
-import { fixedPublicCase } from "@/app/lib/fixed-case";
-import { fixedCaseReveal } from "@/app/lib/fixed-case-reveal.server";
+import { getCaseBundleForOwner } from "@/app/lib/cases.server";
 import {
   rejectCrossOrigin,
   requireRequestUser,
@@ -33,13 +32,15 @@ export async function POST(
   if (!["committed", "evaluation_failed"].includes(attempt.status)) {
     return Response.json({ error: "Attempt is not ready for evaluation." }, { status: 409 });
   }
+  const bundle = await getCaseBundleForOwner(auth.user.userId, attempt.caseId);
+  if (!bundle) return Response.json({ error: "Case not found." }, { status: 404 });
 
   try {
     const result = await evaluateAttempt({
       attemptId,
       responses: attempt.originalResponses,
-      caseData: fixedPublicCase,
-      reveal: fixedCaseReveal,
+      caseData: bundle.publicCase,
+      reveal: bundle.reveal,
     });
     await db
       .update(attempts)

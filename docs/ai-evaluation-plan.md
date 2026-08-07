@@ -3,8 +3,8 @@
 ## Document status
 
 - Status: Step 2 approved by the user
-- Last updated: 2026-08-04
-- Model integration: Fail-closed Responses API adapter implemented; activation requires a server-side credential
+- Last updated: 2026-08-07
+- Model integration: distinct DeepSeek evidence-isolation, blind-generation, reviewer, and evaluation operations behind one fail-closed credential
 - Evaluation execution: Deterministic baseline verified; live model baseline unavailable because no credential is configured
 
 ## 1. Evaluation objective
@@ -25,7 +25,7 @@ They use separate prompts, inputs, outputs, versions, and tests. A successful ge
 - Verified source title, canonical link, publication time, and retrieval time
 - Minimal source excerpts
 - Stable AI HOT item ID when available
-- Human-selected decision dimension
+- Original-source text retrieved from the AI HOT-linked URL
 
 ### Generator output
 
@@ -33,10 +33,10 @@ They use separate prompts, inputs, outputs, versions, and tests. A successful ge
 - Safe pre-commit case projection
 - Post-commit reveal projection
 - Evidence items with stable IDs
-- Four prompts
-- Human-review checklist
+- Two to four prompts with one target-dimension core question
+- Exact supporting quotation for every evidence item
 
-Generated cases remain unpublished until they pass deterministic validation and human review in the MVP.
+Generated cases remain inactive until the separate reviewer pass and all deterministic gates pass.
 
 ### Evaluator input
 
@@ -54,7 +54,7 @@ Generated cases remain unpublished until they pass deterministic validation and 
 - Confidence label
 - Factual claim support list
 
-The evaluator receives the real product outcome for context but is explicitly prohibited from using agreement with that outcome as the scoring rule.
+The evaluator receives what the company chose or shipped for context but is explicitly prohibited from using agreement with it as the scoring rule.
 
 ## 3. Deterministic checks before model calls
 
@@ -69,7 +69,7 @@ The evaluator receives the real product outcome for context but is explicitly pr
 ### Evaluator
 
 - Attempt is owned and committed.
-- Original responses cover all four prompt IDs.
+- Original responses cover every prompt ID and the core initial direction.
 - Every selected choice belongs to its prompt.
 - Required rationales are non-empty.
 - Case and rubric versions exist.
@@ -81,12 +81,22 @@ Requests that fail these checks do not call the model.
 ### Generator
 
 - Output validates against the internal generation contract used in Step 6.
-- Exactly four prompts are present.
+- Two to four prompts are present and the target dimension has exactly one core question.
 - Every prompt maps to a supported rubric dimension.
 - Evidence IDs are unique.
 - Every reveal commentary citation refers to an existing evidence ID.
-- The safe projection validates against `case-public.v1`.
+- The safe projection validates against `case-public.v2`.
 - Prohibited reveal terms and source identifiers are absent from the safe projection.
+- Every supporting quotation is an exact normalized substring of the retrieved original source.
+- Evidence contains an analytical category and `shipped_fact`, `company_reported`, or `inference` provenance.
+
+### Separate reviewer pass
+
+- The reviewer operation receives the original source, isolated pack, and blind draft as untrusted data.
+- Every evidence ID occurs exactly once in the review output.
+- A factual item must be `supported`; an inferred item must be `inference`.
+- Unsupported, contradicted, fabricated-metric, weak-fidelity, or leakage findings reject activation.
+- A `pass` verdict that conflicts with any check is rejected as an invalid review contract.
 
 ### Evaluator
 
@@ -101,7 +111,7 @@ One bounded structural-repair retry is allowed. A second failure is final for th
 
 ## 5. Evaluation corpus
 
-The initial manually reviewed corpus contains at least ten cases, with two cases centered on each rubric dimension:
+The initial automated regression corpus contains at least ten source packs, with two cases centered on each rubric dimension:
 
 - user and problem linkage;
 - evidence use;
@@ -158,7 +168,7 @@ Hard gate: every gold alternative receives reasoning-based feedback and is not m
 
 Compare matched Chinese and English answers at the dimension-rating and improvement-theme level.
 
-Initial output: report exact agreement, adjacent-rating agreement, and theme agreement. A release threshold is set only after the first human-reviewed baseline.
+Initial output: report exact agreement, adjacent-rating agreement, and theme agreement. No threshold is claimed until a measured baseline exists.
 
 ### E6 — Repeatability
 
@@ -184,25 +194,21 @@ Simulate provider timeout, invalid JSON, unknown enum, missing dimension, invali
 
 Hard gate: the attempt remains recoverable but incomplete; Skill Map and public proof remain unchanged.
 
-### E10 — Human disagreement
+### E10 — Cross-model disagreement
 
-The user reviews evaluation output and records `agree`, `partly agree`, or `disagree` by dimension with an optional reason.
+Compare generator claims with the separate reviewer verdicts and record rejection reasons by category. This identifies ambiguous sources, unsupported evidence, and recurring leakage failures while keeping operations and contracts isolated.
 
-This is a product signal, not proof that either the human or AI is automatically correct. It identifies rubric ambiguity and poor feedback wording.
+## 7. Automatic review protocol
 
-## 7. Human review protocol
+For every generated case:
 
-For the initial ten cases:
-
-1. verify the source identity and provenance;
-2. mark evidence statements that may be used as factual support;
-3. identify at least one defensible alternative decision;
-4. write expected strengths and gaps for each answer pattern;
-5. review generator leakage;
-6. compare evaluator output to the expected reasoning notes; and
-7. approve the case for dogfooding or reject it with a reason.
-
-The human reference is a review aid, not a hidden ideal answer shown to the learner.
+1. validate the AI HOT item and original HTTPS source metadata;
+2. require exact source quotations for every evidence item;
+3. have DeepSeek produce the concealed case contract;
+4. have the separate DeepSeek reviewer operation classify each claim as supported, inference, unsupported, or contradicted;
+5. run deterministic schema, quotation, metric, and leakage checks;
+6. activate only a fully consistent `pass` result; and
+7. preserve the existing active case on every failure.
 
 ## 8. Severity model
 
@@ -243,7 +249,7 @@ Before model-backed functionality is considered ready, retain:
 - deterministic validation results;
 - hard-gate pass/fail results;
 - bilingual and repeatability baseline reports;
-- human disagreement notes;
+- separate-reviewer verdicts and rejection reasons;
 - known limitations; and
 - the exact deployment decision.
 
@@ -251,11 +257,11 @@ Unavailable evidence must be labeled unavailable. A green build alone does not p
 
 ## 10. Step 2 evaluation-plan acceptance checks
 
-- Generator and evaluator are independent components.
+- Generator, reviewer, and evaluator are isolated operations with distinct contracts.
 - Model input and output boundaries are explicit.
 - Deterministic validation occurs before persistence or skill updates.
 - Alternative valid decisions and bilingual responses are represented in the corpus.
 - Leakage, prompt injection, citation integrity, repeatability, and failure recovery have named tests.
 - Critical and High severity behavior has explicit deployment gates.
-- Judgmental thresholds are deferred until a human-reviewed baseline exists.
+- Judgmental thresholds are deferred until a measured automated baseline exists.
 - Invalid output fails closed without fabricated feedback.

@@ -16,11 +16,14 @@ type AttemptView = {
   revisionResponses: CaseResponse[] | null;
   evaluation: Evaluation | null;
   evaluatorMode: string | null;
+  revisionEvaluation: Evaluation | null;
+  revisionEvaluatorMode: string | null;
 };
 
 type AttemptPayload = {
   attempt: AttemptView;
   caseData: PublicCase;
+  disputes: Array<{ dimension: string; reason: string | null }>;
 };
 
 const ratingOrder = {
@@ -61,6 +64,7 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
         const response = revisions.find((item) => item.promptId === prompt.promptId);
         return Boolean(
           response?.rationale.trim() &&
+            (!prompt.initialDirectionRequired || response.initialDirection?.trim()) &&
             prompt.choices.some(
               (choice) => choice.choiceId === response.selectedChoiceId,
             ),
@@ -121,7 +125,7 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
         body: JSON.stringify({ revisionResponses: revisions }),
       });
       const data = (await response.json()) as
-        | { attempt: { status: string; completedAt: string } }
+        | { attempt: { status: string; completedAt: string; revisionEvaluation: Evaluation; revisionEvaluatorMode: string } }
         | { error: string };
       if (!response.ok || "error" in data) {
         throw new Error("error" in data ? data.error : "Revision could not be saved.");
@@ -135,12 +139,42 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
                 status: data.attempt.status,
                 completedAt: data.attempt.completedAt,
                 revisionResponses: revisions,
+                revisionEvaluation: data.attempt.revisionEvaluation,
+                revisionEvaluatorMode: data.attempt.revisionEvaluatorMode,
               },
             }
           : current,
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Revision could not be saved.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function disputeDimension(dimension: string) {
+    setWorking(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/attempts/${attemptId}/disputes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dimension }),
+      });
+      const data = (await response.json()) as { dispute?: { dimension: string }; error?: string };
+      if (!response.ok || !data.dispute) throw new Error(data.error ?? "Dispute could not be saved.");
+      setPayload((current) =>
+        current
+          ? {
+              ...current,
+              disputes: current.disputes.some((item) => item.dimension === dimension)
+                ? current.disputes
+                : [...current.disputes, { dimension, reason: null }],
+            }
+          : current,
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Dispute could not be saved.");
     } finally {
       setWorking(false);
     }
@@ -160,7 +194,7 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
           <h2>Ready for evidence-linked feedback.</h2>
           <p>
             The evaluator checks five dimensions. It can support a different
-            product choice and never scores agreement with the real launch.
+            product choice and never scores agreement with the company.
           </p>
           <button
             className="primary-button"
@@ -211,6 +245,16 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
                     ? dimension.evidenceIds.map((id) => <code key={id}>{id}</code>)
                     : "No factual citation used"}
                 </div>
+                <div className="evaluation-meta-row">
+                  <span>{dimension.confidence} confidence</span>
+                  <button
+                    disabled={working || payload.disputes.some((item) => item.dimension === dimension.dimension)}
+                    onClick={() => disputeDimension(dimension.dimension)}
+                    type="button"
+                  >
+                    {payload.disputes.some((item) => item.dimension === dimension.dimension) ? "Excluded from routing" : "I disagree"}
+                  </button>
+                </div>
                 <aside>
                   <strong>Try next</strong>
                   <p>{dimension.improvementPrompt}</p>
@@ -218,6 +262,26 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
               </article>
             ))}
           </div>
+
+          {attempt.revisionEvaluation ? (
+            <article className="content-panel revision-evaluation-panel">
+              <p className="eyebrow">FIRST PASS VS REVISION RESPONSE</p>
+              <h2>Revision is a second evaluation, not a replacement score.</h2>
+              <div className="revision-score-grid">
+                {attempt.evaluation?.dimensions.map((original) => {
+                  const revised = attempt.revisionEvaluation?.dimensions.find((item) => item.dimension === original.dimension);
+                  return (
+                    <div key={original.dimension}>
+                      <strong>{original.dimension.replaceAll("_", " ")}</strong>
+                      <p><span>First pass</span>{original.rating}</p>
+                      <p><span>Revision</span>{revised?.rating ?? "Unavailable"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <p>{attempt.revisionEvaluation.overallSummary}</p>
+            </article>
+          ) : null}
 
           <article className="content-panel revision-panel">
             <p className="eyebrow">REVISION</p>
@@ -281,6 +345,7 @@ export function FeedbackClient({ attemptId }: { attemptId: string }) {
             {attempt.status === "completed" ? (
               <div className="completion-actions">
                 <span className="locked-chip">Rep completed</span>
+                <a className="secondary-button" href="/app/candidates">Pick the next rep</a>
                 <a className="secondary-button" href="/app/skills">View Skill Map</a>
                 <a className="primary-link" href="/app/proof">Build Decision Card</a>
               </div>

@@ -8,17 +8,17 @@ The core learning loop is ready for private use. Model-generated case drafting a
 
 ## Verified product flow
 
-- Commit four complete decisions before reveal.
+- Commit two to four complete decisions, including the core initial direction, before reveal.
 - Store the original response as an immutable attempt field with no update route.
-- Reveal the company, product, outcome, and verified source only after durable commitment.
+- Reveal the company, product, what it chose or shipped, and verified source only after durable commitment.
 - Return all five rubric dimensions with bounded ratings and valid evidence IDs.
 - Keep rules-based feedback visibly labeled and separate from model output.
-- Save revisions separately from original responses.
+- Save and evaluate revisions separately from original responses.
 - Update Skill Map observations only after a valid evaluation and completed revision.
 - Create a private Decision Card snapshot only after completion.
 - Publish and unpublish the public snapshot through explicit owner actions.
 - Return `404` for an unpublished public-card slug.
-- Fetch current selected AI product candidates from the AI HOT public read-only API and keep them behind a human review gate.
+- Fetch only selected AI product candidates from AI HOT, preflight and save only practice-fit items in the private pool, target a practice dimension, randomly claim an unseen eligible item, and activate only after DeepSeek's separate reviewer pass plus deterministic checks.
 
 ## Automated evidence
 
@@ -41,20 +41,21 @@ The release suite covers:
 | E1 contract validity | Passed for deterministic evaluator | Five dimensions, bounded enums, and evidence IDs verified end to end |
 | E2 citation integrity | Passed for deterministic evaluator | Every supported factual claim cites existing case evidence |
 | E3 commit-before-reveal | Passed | Pre-commit HTML and client assets contain no prohibited reveal values |
-| E4 alternative decisions | Partial | Rules copy does not call alternatives incorrect; human-reviewed multi-case model corpus unavailable |
-| E5 bilingual consistency | Unavailable | Requires live model baseline and matched human-reviewed responses |
+| E4 alternative decisions | Partial | Rules copy does not call alternatives incorrect; multi-case model corpus unavailable |
+| E5 bilingual consistency | Unavailable | Requires live model baseline and matched bilingual responses |
 | E6 repeatability | Deterministic baseline passed | Rules evaluator is deterministic; live model repeatability unavailable |
 | E7 shallow terminology resistance | Partial | Rules baseline uses evidence and system-awareness signals; full corpus unavailable |
 | E8 prompt-injection resistance | Design passed, model run unavailable | External text remains server-side untrusted input; no live model credential |
 | E9 fail-closed behavior | Passed by implementation | Configured model failures create no evaluation, skill progress, or public content |
-| E10 human disagreement | Product capture deferred | No dogfood disagreement data exists yet |
+| E10 cross-model disagreement | Contract implemented, live baseline unavailable | Reviewer rejection reasons are structured; no credential-backed corpus has run yet |
 
 ## Known limitations
 
-- Only one manually verified active case exists.
+- The fixed case is the active fallback until the DeepSeek credential is configured and an automatic case passes.
 - The deterministic evaluator is a transparent baseline, not a substitute for model-quality evidence.
-- AI HOT candidates expose summaries for review but never become active cases automatically.
-- Live DeepSeek V4 Flash evaluation and generator baselines are unavailable until a credential is configured.
+- AI HOT candidates can become active only through isolated evidence extraction, blind DeepSeek generation, a separate DeepSeek reviewer pass, and deterministic source-quotation/leakage gates.
+- Repeated AI HOT syncs do not reset completed or active pool items to queued, and random selection never draws a completed item.
+- Live generation and reviewer baselines are unavailable until the server-side DeepSeek credential is configured.
 - No baseline exists yet for completion rate, weekly retention, bilingual agreement, or human disagreement; these metrics must not be estimated.
 
 ## Next evidence to collect
@@ -62,4 +63,4 @@ The release suite covers:
 1. Complete the fixed case repeatedly with deliberately different reasoning quality.
 2. Record agreement or disagreement with each feedback dimension.
 3. Configure a server-side model credential and run the planned bilingual, alternative-decision, repeatability, and injection corpus.
-4. Human-review at least ten generated cases before rotating the active case.
+4. Run at least ten source packs through the automatic dual-model gate and report exact rejection categories before claiming generation quality.

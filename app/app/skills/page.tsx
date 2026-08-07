@@ -9,10 +9,10 @@ export default function SkillsPage() {
     <AppShell active="skills">
       <header className="page-intro">
         <p className="eyebrow">YOUR JUDGMENT PATTERNS</p>
-        <h1>Progress comes from completed revisions.</h1>
+        <h1>See first-pass judgment and revision response separately.</h1>
         <p>
-          Patterns are derived only from completed reps with valid feedback.
-          There is no universal PM score.
+          First-pass signals guide practice after calibration. Revision shows how
+          you respond to feedback without rewriting the original result.
         </p>
       </header>
       <SkillsClient />

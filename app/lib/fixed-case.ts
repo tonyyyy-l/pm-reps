@@ -14,23 +14,42 @@ export type CasePrompt = {
   question: string;
   choices: CaseChoice[];
   rationaleRequired: true;
+  initialDirectionRequired: boolean;
 };
 
 export type CaseResponse = {
   promptId: string;
   selectedChoiceId: string;
   rationale: string;
+  initialDirection?: string;
 };
 
+export type CaseDifficulty = "structured" | "trade_off" | "ambiguous";
+export type EvidenceProvenance =
+  | "shipped_fact"
+  | "company_reported"
+  | "inference";
+
 export type PublicCase = {
-  schemaVersion: "case-public.v1";
+  schemaVersion: "case-public.v2";
   caseId: string;
   estimatedMinutes: number;
   decisionType: "product_priority";
+  targetDimension: CasePrompt["dimension"];
+  difficulty: CaseDifficulty;
+  corePromptId: string;
   scenario: string;
   evidence: Array<{
     evidenceId: string;
-    kind: "fact" | "metric" | "constraint";
+    category:
+      | "trend"
+      | "behavior"
+      | "pain"
+      | "need"
+      | "risk"
+      | "metric"
+      | "constraint";
+    provenance: EvidenceProvenance;
     text: string;
   }>;
   constraints: string[];
@@ -38,37 +57,45 @@ export type PublicCase = {
 };
 
 export const fixedPublicCase: PublicCase = {
-  schemaVersion: "case-public.v1",
+  schemaVersion: "case-public.v2",
   caseId: "fixed-agent-workspace-001",
   estimatedMinutes: 8,
   decisionType: "product_priority",
+  targetDimension: "user_problem",
+  difficulty: "structured",
+  corePromptId: "prompt-user",
   scenario:
     "A mature AI coding agent is moving beyond short, single-task sessions. Professional developers now ask it to handle longer-running work across several repositories, but the terminal and editor make parallel tasks hard to supervise. You own the next product surface.",
   evidence: [
     {
       evidenceId: "evidence-01",
-      kind: "fact",
-      text: "Agent tasks are becoming longer-running and more complex.",
+      category: "trend",
+      provenance: "company_reported",
+      text: "The company reports that agent tasks are becoming longer-running and more complex.",
     },
     {
       evidenceId: "evidence-02",
-      kind: "fact",
+      category: "behavior",
+      provenance: "inference",
       text: "Developers increasingly coordinate several tasks and projects at once.",
     },
     {
       evidenceId: "evidence-03",
-      kind: "fact",
-      text: "Existing terminal and editor workflows create context switching and supervision friction.",
+      category: "pain",
+      provenance: "company_reported",
+      text: "The company reports that existing terminal and editor workflows create supervision friction.",
     },
     {
       evidenceId: "evidence-04",
-      kind: "constraint",
+      category: "need",
+      provenance: "inference",
       text: "Parallel code changes need isolation so agents do not overwrite one another.",
     },
     {
       evidenceId: "evidence-05",
-      kind: "constraint",
-      text: "Repository access, network access, and elevated actions require explicit safety controls.",
+      category: "risk",
+      provenance: "company_reported",
+      text: "The company reports that repository, network, and elevated actions require explicit safety controls.",
     },
   ],
   constraints: [
@@ -84,18 +111,19 @@ export const fixedPublicCase: PublicCase = {
       choices: [
         {
           choiceId: "user-professional",
-          label: "Professional developers supervising several concurrent repository tasks",
+          label: "Experienced developers actively supervising several concurrent repository tasks",
         },
         {
-          choiceId: "user-learner",
-          label: "New programmers learning how to write their first functions",
+          choiceId: "user-platform-team",
+          label: "Platform teams standardizing how developers delegate and review agent work",
         },
         {
           choiceId: "user-manager",
-          label: "Engineering managers reading team-level productivity reports",
+          label: "Hands-on engineering managers coordinating delivery across several repositories",
         },
       ],
       rationaleRequired: true,
+      initialDirectionRequired: true,
     },
     {
       promptId: "prompt-priority",
@@ -108,14 +136,15 @@ export const fixedPublicCase: PublicCase = {
         },
         {
           choiceId: "priority-autocomplete",
-          label: "Faster inline autocomplete inside the existing editor",
+          label: "An editor-native supervisor that keeps plans, diffs, and approvals in one repository view",
         },
         {
-          choiceId: "priority-gallery",
-          label: "A public gallery for sharing generated code snippets",
+          choiceId: "priority-team-control",
+          label: "A team control plane that assigns isolated agent work and centralizes review policy",
         },
       ],
       rationaleRequired: true,
+      initialDirectionRequired: false,
     },
     {
       promptId: "prompt-metric",
@@ -128,14 +157,15 @@ export const fixedPublicCase: PublicCase = {
         },
         {
           choiceId: "metric-started",
-          label: "Number of agent tasks started per active user",
+          label: "Share of multi-agent sessions completed without manual context recovery",
         },
         {
           choiceId: "metric-messages",
-          label: "Average messages sent in each agent thread",
+          label: "Median time from delegated task start to a reviewed, merge-ready change",
         },
       ],
       rationaleRequired: true,
+      initialDirectionRequired: false,
     },
     {
       promptId: "prompt-rollout",
@@ -148,22 +178,24 @@ export const fixedPublicCase: PublicCase = {
         },
         {
           choiceId: "rollout-broad",
-          label: "An immediate public launch across every operating system",
+          label: "A broad beta for existing agent users with isolation required and team controls deferred",
         },
         {
-          choiceId: "rollout-unrestricted",
-          label: "Always-on background agents with unrestricted network and repository access",
+          choiceId: "rollout-design-partner",
+          label: "A design-partner pilot for teams with admin policy controls before an individual-user release",
         },
       ],
       rationaleRequired: true,
+      initialDirectionRequired: false,
     },
   ],
 };
 
 export function validateCompleteResponses(
   responses: unknown,
+  caseData: PublicCase = fixedPublicCase,
 ): responses is CaseResponse[] {
-  if (!Array.isArray(responses) || responses.length !== fixedPublicCase.prompts.length) {
+  if (!Array.isArray(responses) || responses.length !== caseData.prompts.length) {
     return false;
   }
 
@@ -176,16 +208,20 @@ export function validateCompleteResponses(
           typeof candidate.promptId === "string" &&
           typeof candidate.selectedChoiceId === "string" &&
           typeof candidate.rationale === "string" &&
-          candidate.rationale.trim().length > 0
+          candidate.rationale.trim().length > 0 &&
+          (candidate.initialDirection === undefined ||
+            typeof candidate.initialDirection === "string")
         );
       })
       .map((response) => [response.promptId, response]),
   );
 
-  return fixedPublicCase.prompts.every((prompt) => {
+  return caseData.prompts.every((prompt) => {
     const response = responseByPrompt.get(prompt.promptId);
     return (
       response !== undefined &&
+      (!prompt.initialDirectionRequired ||
+        Boolean(response.initialDirection?.trim())) &&
       prompt.choices.some(
         (choice) => choice.choiceId === response.selectedChoiceId,
       )

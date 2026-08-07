@@ -2,10 +2,9 @@ import { getDb } from "@/db";
 import { ensureSchema } from "@/db/ensure-schema";
 import { attempts } from "@/db/schema";
 import {
-  fixedPublicCase,
   validateCompleteResponses,
 } from "@/app/lib/fixed-case";
-import { fixedCaseReveal } from "@/app/lib/fixed-case-reveal.server";
+import { getCaseBundleForOwner } from "@/app/lib/cases.server";
 import {
   rejectCrossOrigin,
   requireRequestUser,
@@ -23,23 +22,28 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "Commitment must be valid JSON." }, { status: 400 });
   }
-  if (
-    body.caseId !== fixedPublicCase.caseId ||
-    !validateCompleteResponses(body.originalResponses)
-  ) {
+  if (typeof body.caseId !== "string") {
     return Response.json(
-      { error: "Complete all four decisions and rationales before committing." },
+      { error: "Complete every decision, initial direction, and rationale before committing." },
       { status: 400 },
     );
   }
 
   await ensureSchema();
+  const bundle = await getCaseBundleForOwner(auth.user.userId, body.caseId);
+  if (!bundle) return Response.json({ error: "Case not found." }, { status: 404 });
+  if (!validateCompleteResponses(body.originalResponses, bundle.publicCase)) {
+    return Response.json(
+      { error: "Complete every decision, initial direction, and rationale before committing." },
+      { status: 400 },
+    );
+  }
   const now = new Date().toISOString();
   const attemptId = crypto.randomUUID();
   await getDb().insert(attempts).values({
     id: attemptId,
     ownerId: auth.user.userId,
-    caseId: fixedPublicCase.caseId,
+    caseId: bundle.publicCase.caseId,
     status: "committed",
     startedAt: now,
     committedAt: now,
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
         committedAt: now,
         originalResponses: body.originalResponses,
       },
-      reveal: fixedCaseReveal,
+      reveal: bundle.reveal,
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );

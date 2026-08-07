@@ -11,8 +11,8 @@
 
 | Contract | File | Producer | Consumer | Trust level |
 | --- | --- | --- | --- | --- |
-| Pre-commit case | `schemas/case-public.v1.schema.json` | Case service | Authenticated browser | Safe before commitment |
-| Post-commit reveal | `schemas/case-reveal.v1.schema.json` | Case service | Committed attempt owner | Private reveal |
+| Pre-commit case | `schemas/case-public.v2.schema.json` | Case service | Authenticated browser | Safe before commitment |
+| Post-commit reveal | `schemas/case-reveal.v2.schema.json` | Case service | Committed attempt owner | Private reveal |
 | Attempt lifecycle | `schemas/attempt.v1.schema.json` | Attempt service | Private application | Private |
 | Evaluation result | `schemas/evaluation.v1.schema.json` | Evaluation service | Feedback and Skill Map services | Private, validated |
 | Published Decision Card | `schemas/decision-card-public.v1.schema.json` | Publication service | Anonymous browser | Explicitly public |
@@ -21,7 +21,7 @@ JSON Schema Draft 2020-12 is the canonical machine-readable format.
 
 ## 2. Versioning rules
 
-- `schemaVersion` is required in every payload and uses a stable value such as `case-public.v1`.
+- `schemaVersion` is required in every payload and uses a stable value such as `case-public.v2`.
 - Adding an optional field may remain within `v1` only when old consumers continue to behave correctly.
 - Removing a field, changing meaning, changing an enum, or making an optional field required creates a new major contract version.
 - Stored attempts retain the contract and rubric version used when they were created.
@@ -82,8 +82,8 @@ Public and pre-commit payloads are built by constructing new allowlisted objects
 Required projections:
 
 ```text
-Internal case → case-public.v1
-Internal case + committed ownership → case-reveal.v1
+Internal case → case-public.v2
+Internal case + committed ownership → case-reveal.v2
 Completed attempt + user-approved fields → private proof preview
 Private proof preview + explicit publish action → decision-card-public.v1 snapshot
 ```
@@ -99,6 +99,15 @@ This rule prevents newly added private database fields from leaking into existin
 - `completed` requires a valid evaluation and the revision requirement.
 - `evaluation_failed` is ineligible for Skill Map updates and publication.
 - Public card state does not change attempt completion state.
+
+## 6A. Candidate pool invariants
+
+- AI HOT item IDs are unique per owner in `candidate_product_pool`.
+- Only selected `ai-products` items that pass the current practice-fit gate may be inserted as `queued`.
+- Repeated syncs may update source metadata and fit labels but must not reset `generating`, `active`, `completed`, or `rejected` lifecycle states.
+- Random case generation atomically claims only a `queued` item.
+- A generated item becomes `completed` only when its owned attempt reaches completed revision status.
+- `completed` and `rejected` items are never eligible for random selection.
 
 ## 7. Evidence invariants
 
@@ -132,13 +141,14 @@ For model output, schema validation occurs before state mutation, followed by ev
 
 ## 10. Contract-specific notes
 
-### `case-public.v1`
+### `case-public.v2`
 
 This contract intentionally has `additionalProperties: false`. Prohibited reveal fields cannot be added without a contract change and an explicit review.
+Each evidence item carries an analytical `category` and a provenance label: `shipped_fact`, `company_reported`, or `inference`. The contract also includes target dimension, difficulty, and core prompt identity.
 
-### `case-reveal.v1`
+### `case-reveal.v2`
 
-This contract may be returned only after committed ownership is verified. It contains provenance and real outcome but no private data from other attempts.
+This contract may be returned only after committed ownership is verified. It contains provenance and what the company chose or shipped, but no later market-performance tracking.
 
 ### `attempt.v1`
 

@@ -8,6 +8,27 @@
       "when": 1785845658685,
       "tag": "0000_unknown_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786078962737,
+      "tag": "0001_married_exodus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786080423900,
+      "tag": "0002_familiar_nocturne",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786086727639,
+      "tag": "0003_vengeful_power_pack",
+      "breakpoints": true
     }
   ]
 }

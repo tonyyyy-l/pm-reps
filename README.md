@@ -2,24 +2,25 @@
 
 PM Reps turns verified AI product launches into short, evidence-grounded product judgment exercises.
 
-The learner must commit to a decision before seeing the company, source material, or real launch outcome. The product then provides rubric-based feedback, asks for a revision, and saves the reasoning trail as a private learning record or a public Decision Card.
+The learner must commit to a decision before seeing the company, source material, or what the company chose or shipped. The product then provides rubric-based feedback, re-evaluates a revision, and saves the reasoning trail as a private learning record or a public Decision Card.
 
 ## Current status
 
 The end-to-end MVP is complete and ready for private deployment.
 
-The product now supports durable private attempts, four evidence-grounded decisions, commitment-before-reveal, five-dimension feedback, revision, Skill Map observations, reversible Decision Card publication, and a live AI HOT case-candidate inbox. A labeled deterministic evaluator keeps the product usable without a model credential; a fail-closed DeepSeek V4 Flash adapter activates only when `DEEPSEEK_API_KEY` is configured.
+The product now supports durable private attempts, two-to-four evidence-grounded decisions, commitment-before-reveal, five-dimension feedback, separately evaluated revisions, disputed-feedback exclusion, calibrated deliberate-practice routing, reversible Decision Card publication, and an anonymous private AI HOT practice pool. DeepSeek V4 Flash performs isolated evidence extraction, blind case generation, a separate reviewer pass, and learner evaluation before deterministic quality and leakage gates can activate a case.
 
 ## Product surfaces
 
 - `Today's Rep`: one short decision exercise based on a real AI product launch.
+- `Case Inbox`: an anonymous, durable practice-fit pool with targeted and surprise selection.
 - `Feedback`: evidence-linked feedback that evaluates reasoning rather than agreement with the company.
 - `Skill Map`: recurring judgment patterns across completed exercises.
 - `Public Proof`: recruiter-readable Decision Cards showing decision, rationale, evidence, feedback, and revision.
 
 ## Product principles
 
-- The learner decides before the product reveals the real outcome.
+- The learner writes an initial direction and decides before the product reveals what the company chose or shipped.
 - Different decisions can be valid when the reasoning is defensible.
 - Feedback must cite case evidence and separate facts from inference.
 - Revision is part of the exercise, not an optional afterthought.
@@ -38,4 +39,6 @@ The product now supports durable private attempts, four evidence-grounded decisi
 
 ## Current operating boundary
 
-The fixed case is active and manually verified. AI HOT items enter only the Case Inbox and require source review before they can become active exercises. Model-generated evaluation is unavailable until a server-side DeepSeek API credential is configured; the product labels rules-based feedback and never presents it as model output.
+The fixed case remains the safe fallback. PM Reps reads only AI HOT selected products and stores only practice-fit products in an owner-scoped D1 pool. Routine refresh uses the selected seven-day `ai-products` feed; an owner-scoped backfill can page the complete selected snapshot and apply a bounded start date before the same fit and source-readability gates. A deterministic filter requires sufficient source material, coverage of at least two judgment dimensions, and a minimum fit score of 75; pure funding, benchmark, paper, and minor-update items are excluded. Random selection draws only from `queued` products. The selected product becomes `completed` only after the learner submits a post-feedback revision, so it cannot be drawn again.
+
+AI HOT summaries are discovery leads only: ingestion preflights the linked original source, DeepSeek isolates decision-time evidence from the shipped choice, generates a blind structured draft, and runs a separate reviewer pass. Deterministic gates verify quotations, provenance, target coverage, option quality, and leakage. Dynamic activation requires only server-side `DEEPSEEK_API_KEY`; a missing credential or any failed gate leaves the current case unchanged while the saved practice pool remains available.

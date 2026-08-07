@@ -67,11 +67,11 @@ test("server-renders the PM Reps landing page", async () => {
 
 test("server-renders the complete workspace surface", async () => {
   const expectations = [
-    ["/app/today", /Design the surface before seeing what shipped\./],
+    ["/app/today", /Decide what this AI product should ship\./],
     ["/app/feedback", /Inspect the reasoning, then make it better\./],
     ["/app/feedback/example", /Your reasoning, not a model answer\./],
-    ["/app/candidates", /Fresh product launches, held behind a review gate\./],
-    ["/app/skills", /Progress comes from completed revisions\./],
+    ["/app/candidates", /A filtered pool that trains product judgment\./],
+    ["/app/skills", /See first-pass judgment and revision response separately\./],
     ["/app/proof", /Make the reasoning trail recruiter-readable\./],
   ];
 
@@ -87,8 +87,15 @@ test("keeps reveal-only fields out of the pre-commit page", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
 
-  assert.match(html, /Agent tasks are becoming longer-running and more complex\./);
+  assert.match(html, /agent tasks are becoming longer-running and more complex\./i);
   assert.match(html, /Who should the first version serve most directly\?/);
+  assert.match(html, /1\. Read the case brief/);
+  assert.match(html, />trend</i);
+  assert.match(html, />behavior</i);
+  assert.match(html, />pain</i);
+  assert.match(html, />need</i);
+  assert.match(html, />risk</i);
+  assert.match(html, /PROGRESS &amp; PROOF/);
   assert.doesNotMatch(html, /OpenAI|Codex app|introducing-the-codex-app/i);
   assert.doesNotMatch(html, /41%|13%/);
 });
@@ -120,6 +127,22 @@ test("rejects incomplete or cross-origin commitments before any reveal", async (
   assert.equal(retiredReveal.status, 404);
 });
 
+test("keeps automatic case activation fail-closed without the DeepSeek credential", async () => {
+  const response = await request("/api/cases/next", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  assert.equal(response.status, 503);
+  const payload = await response.json();
+  assert.equal(payload.code, "configuration_required");
+
+  const today = await request("/api/cases/today", { headers: { accept: "application/json" } });
+  assert.equal(today.status, 200);
+  const current = await today.json();
+  assert.equal(current.caseData.caseId, "fixed-agent-workspace-001");
+  assert.doesNotMatch(JSON.stringify(current), /OpenAI|Codex app/i);
+});
+
 test("completes the private rep, skill, and reversible proof lifecycle", async () => {
   const identity = {
     "oai-authenticated-user-id": `test-user-${process.pid}`,
@@ -129,6 +152,7 @@ test("completes the private rep, skill, and reversible proof lifecycle", async (
     {
       promptId: "prompt-user",
       selectedChoiceId: "user-professional",
+      initialDirection: "Prioritize the people already coordinating multiple agent tasks.",
       rationale:
         "Professional developers have the multi-task supervision problem described in the evidence.",
     },
@@ -167,7 +191,8 @@ test("completes the private rep, skill, and reversible proof lifecycle", async (
   assert.equal(commit.status, 201);
   const committed = await commit.json();
   assert.equal(committed.attempt.status, "committed");
-  assert.equal(committed.reveal.schemaVersion, "case-reveal.v1");
+  assert.equal(committed.reveal.schemaVersion, "case-reveal.v2");
+  assert.match(committed.reveal.whatShipped, /desktop command center/i);
 
   const attemptId = committed.attempt.attemptId;
   const evaluate = await request(
@@ -197,17 +222,31 @@ test("completes the private rep, skill, and reversible proof lifecycle", async (
     jsonRequest("POST", { revisionResponses }),
   );
   assert.equal(revise.status, 200);
-  assert.equal((await revise.json()).attempt.status, "completed");
+  const revised = await revise.json();
+  assert.equal(revised.attempt.status, "completed");
+  assert.equal(revised.attempt.revisionEvaluation.dimensions.length, 5);
+
+  const dispute = await request(
+    `/api/attempts/${attemptId}/disputes`,
+    jsonRequest("POST", { dimension: "metric_validity" }),
+  );
+  assert.equal(dispute.status, 201);
 
   const skills = await request("/api/skills", { headers: identity });
   assert.equal(skills.status, 200);
-  assert.equal((await skills.json()).completedReps, 1);
+  const skillPayload = await skills.json();
+  assert.equal(skillPayload.completedReps, 1);
+  assert.equal(skillPayload.calibration.label, "Early signals");
+  assert.equal(skillPayload.disputedObservations, 1);
+  assert.equal(skillPayload.patterns[0].firstPass.observationCount, 1);
+  assert.equal(skillPayload.patterns[0].revisionResponse.observationCount, 1);
 
   const proof = await request("/api/proof", { headers: identity });
   assert.equal(proof.status, 200);
   const privateProof = (await proof.json()).card;
   assert.equal(privateProof.status, "private");
   assert.equal(privateProof.snapshot.schemaVersion, "decision-card-public.v1");
+  assert.match(privateProof.snapshot.comparison.whatCompanyChoseOrShipped, /desktop command center/i);
 
   const publish = await request(
     `/api/proof/${privateProof.id}/publish`,
@@ -242,13 +281,16 @@ test("keeps reveal-only values out of emitted client assets", async () => {
 });
 
 test("removes the starter and includes durable-state migrations", async () => {
-  const [packageJson, hosting, migration] = await Promise.all([
+  const [packageJson, hosting, migration, generatedMigration, poolMigration, curriculumMigration] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(
       new URL("../drizzle/0000_unknown_invisible_woman.sql", import.meta.url),
       "utf8",
     ),
+    readFile(new URL("../drizzle/0001_married_exodus.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0002_familiar_nocturne.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0003_vengeful_power_pack.sql", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(packageJson, /react-loading-skeleton|site-creator-vinext-starter/);
@@ -257,12 +299,46 @@ test("removes the starter and includes durable-state migrations", async () => {
   assert.match(hosting, /"r2": null/);
   assert.match(migration, /CREATE TABLE `attempts`/);
   assert.match(migration, /CREATE UNIQUE INDEX `idx_cards_slug`/);
+  assert.match(generatedMigration, /CREATE TABLE `generated_cases`/);
+  assert.match(generatedMigration, /idx_generated_owner_status_created/);
+  assert.match(poolMigration, /CREATE TABLE `candidate_product_pool`/);
+  assert.match(poolMigration, /idx_pool_owner_status_fit/);
+  assert.match(curriculumMigration, /CREATE TABLE `evaluation_disputes`/);
+  assert.match(curriculumMigration, /idx_skill_attempt_dimension_signal/);
   await assert.rejects(access(new URL("../app/_sites-preview", import.meta.url)));
 });
 
+test("uses selected-only current sync and historical backfill for the practice pool", async () => {
+  const [aiHotSource, poolSource, nextSource, revisionSource, backfillSource] = await Promise.all([
+    readFile(new URL("../app/lib/ai-hot.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/candidate-pool.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/cases/next/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/attempts/[attemptId]/revise/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/candidates/backfill/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(aiHotSource, /api\/v1\/items\?mode=selected&category=ai-products/);
+  assert.match(aiHotSource, /item\.selected !== true/);
+  assert.doesNotMatch(aiHotSource, /mode=all/);
+  assert.match(aiHotSource, /api\/v1\/selected\/snapshot/);
+  assert.match(aiHotSource, /fields", "default"/);
+  assert.match(aiHotSource, /candidateTimelineAt/);
+  assert.match(poolSource, /dimensions\.length >= 2/);
+  assert.match(poolSource, /score >= 75/);
+  assert.match(poolSource, /eq\(candidateProductPool\.status, "queued"\)/);
+  assert.match(poolSource, /RANDOM\(\)/);
+  assert.match(nextSource, /claimRandomUncompletedProduct/);
+  assert.match(nextSource, /replacement < 3/);
+  assert.match(revisionSource, /candidateProductPool/);
+  assert.match(revisionSource, /status: "completed"/);
+  assert.match(backfillSource, /backfillSelectedProductPoolSince/);
+  assert.match(backfillSource, /selected_product_history_backfilled/);
+});
+
 test("uses DeepSeek V4 Flash without committing a credential", async () => {
-  const [evaluationSource, workerSource, envExample] = await Promise.all([
+  const [evaluationSource, generationSource, workerSource, envExample] = await Promise.all([
     readFile(new URL("../app/lib/evaluation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/case-generation.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
@@ -270,7 +346,12 @@ test("uses DeepSeek V4 Flash without committing a credential", async () => {
   assert.match(evaluationSource, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(evaluationSource, /deepseek-v4-flash/);
   assert.match(evaluationSource, /response_format:\s*\{ type: "json_object" \}/);
+  assert.match(generationSource, /https:\/\/api\.deepseek\.com\/chat\/completions/);
+  assert.match(generationSource, /blind-generator\.v2/);
+  assert.match(generationSource, /reviewer\.v2/);
+  assert.match(generationSource, /optionQuality/);
+  assert.match(generationSource, /sourceQuote/);
   assert.match(workerSource, /DEEPSEEK_API_KEY\?: string/);
   assert.match(envExample, /^DEEPSEEK_API_KEY=$/m);
-  assert.doesNotMatch(`${evaluationSource}\n${workerSource}\n${envExample}`, /OPENAI_API_KEY|api\.openai\.com/);
+  assert.doesNotMatch(`${evaluationSource}\n${generationSource}\n${workerSource}\n${envExample}`, /OPENAI_API_KEY|api\.openai\.com|GEMINI_API_KEY|generativelanguage\.googleapis\.com/);
 });

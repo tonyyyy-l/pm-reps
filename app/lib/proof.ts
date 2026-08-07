@@ -1,4 +1,4 @@
-import { fixedPublicCase, type CaseResponse } from "./fixed-case";
+import type { CaseResponse, PublicCase } from "./fixed-case";
 import type { FixedCaseReveal } from "./fixed-case-reveal.server";
 
 export type DecisionCardSnapshot = {
@@ -8,7 +8,7 @@ export type DecisionCardSnapshot = {
   displayName: string;
   case: {
     title: string;
-    decisionType: "product_priority";
+    decisionType: PublicCase["decisionType"];
   };
   decision: {
     summary: string;
@@ -16,6 +16,10 @@ export type DecisionCardSnapshot = {
     assumptions: string[];
   };
   revisionSummary: string;
+  comparison: {
+    whatCompanyChoseOrShipped: string;
+    note: string;
+  };
   source: FixedCaseReveal["source"];
 };
 
@@ -24,6 +28,7 @@ export function createDecisionCardSnapshot(input: {
   displayName: string;
   originalResponses: CaseResponse[];
   revisionResponses: CaseResponse[];
+  caseData: PublicCase;
   reveal: FixedCaseReveal;
   publishedAt?: string;
 }): DecisionCardSnapshot {
@@ -41,13 +46,13 @@ export function createDecisionCardSnapshot(input: {
     publishedAt: input.publishedAt ?? "1970-01-01T00:00:00.000Z",
     displayName: input.displayName,
     case: {
-      title: "Designing a command center for parallel AI agent work",
-      decisionType: "product_priority",
+      title: input.caseData.scenario,
+      decisionType: input.caseData.decisionType,
     },
     decision: {
       summary: input.revisionResponses
         .map((response) => {
-          const prompt = fixedPublicCase.prompts.find(
+          const prompt = input.caseData.prompts.find(
             (item) => item.promptId === response.promptId,
           );
           return prompt?.choices.find(
@@ -60,14 +65,17 @@ export function createDecisionCardSnapshot(input: {
         .map((response) => response.rationale)
         .join("\n\n"),
       assumptions: [
-        "The first release should complement existing terminal and editor workflows.",
-        "Safety controls and isolated changes are necessary for parallel agent work.",
+        ...input.caseData.constraints.slice(0, 3),
       ],
     },
     revisionSummary:
       changedCount === 0
         ? "I kept my original decisions after reviewing the feedback and documented why."
-        : `I changed ${changedCount} of four decisions or rationales after reviewing evidence-linked feedback.`,
+        : `I changed ${changedCount} of ${input.caseData.prompts.length} decisions or rationales after reviewing evidence-linked feedback.`,
+    comparison: {
+      whatCompanyChoseOrShipped: input.reveal.whatShipped,
+      note: "The company choice is a comparison point, not an answer key.",
+    },
     source: input.reveal.source,
   };
 }

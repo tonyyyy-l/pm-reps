@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- Plain document navigation avoids the vinext client-hook failure previously observed in this project. */
 export default function Home() {
   return (
     <main className="landing-page">
@@ -48,7 +49,7 @@ export default function Home() {
         <article>
           <span>01</span>
           <h2>Commit first</h2>
-          <p>The source and real launch stay hidden until your decision is locked.</p>
+          <p>The source and company choice stay hidden until your decision is locked.</p>
         </article>
         <article>
           <span>02</span>

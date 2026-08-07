@@ -1,84 +1,84 @@
 import { getDb } from "@/db";
 import { ensureSchema } from "@/db/ensure-schema";
 import { sourceIngestionRuns } from "@/db/schema";
+import {
+  getCandidatePool,
+  syncSelectedProductPool,
+} from "@/app/lib/candidate-pool.server";
+import { automaticCasePipelineStatus } from "@/app/lib/case-generation.server";
+import { getPracticePlan } from "@/app/lib/curriculum.server";
 import { requireRequestUser } from "@/app/lib/request-user";
-
-type Candidate = {
-  id: string;
-  title: string;
-  summary: string | null;
-  category: "ai-products";
-  publishedAt: string | null;
-  permalink: string;
-};
-
-const AI_HOT_URL =
-  "https://aihot.virxact.com/api/public/items?mode=selected&category=ai-products&take=8";
-const AI_HOT_UA = "aihot-skill/0.3.7 (+https://aihot.virxact.com/aihot-skill/)";
 
 export async function GET(request: Request) {
   const auth = requireRequestUser(request);
   if (!auth.user) return auth.response;
   await ensureSchema();
+  let syncWarning = "";
+  let syncResult = { synced: false, addedOrUpdated: 0, excluded: 0 };
   try {
-    const response = await fetch(AI_HOT_URL, {
-      headers: { "User-Agent": AI_HOT_UA },
-    });
-    if (!response.ok) throw new Error(`status_${response.status}`);
-    const payload = (await response.json()) as { items?: unknown[] };
-    const candidates = (payload.items ?? [])
-      .map(parseCandidate)
-      .filter((candidate): candidate is Candidate => candidate !== null);
-    const fetchedAt = new Date().toISOString();
+    syncResult = await syncSelectedProductPool(auth.user.userId);
     await getDb().insert(sourceIngestionRuns).values({
       id: crypto.randomUUID(),
       ownerId: auth.user.userId,
-      status: "candidate_review",
-      itemCount: candidates.length,
-      candidates,
-      fetchedAt,
-    });
-    return Response.json(
-      {
-        candidates,
-        fetchedAt,
-        source: {
-          name: "AI HOT",
-          canonical: "https://aihot.virxact.com/",
+      status: "selected_product_pool_synced",
+      itemCount: syncResult.addedOrUpdated,
+      candidates: [
+        {
+          selectedProductsSaved: syncResult.addedOrUpdated,
+          practiceFitExcluded: syncResult.excluded,
         },
-        reviewStatus: "Human source verification required before case activation.",
-      },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+      ],
+      fetchedAt: new Date().toISOString(),
+    });
   } catch {
+    syncWarning =
+      "AI HOT sync is temporarily unavailable. The existing local product pool is still usable.";
+  }
+
+  const pool = await getCandidatePool(auth.user.userId);
+  if (!pool.counts.total && syncWarning) {
     return Response.json(
-      {
-        error:
-          "AI HOT is temporarily unavailable. No candidate was invented or backfilled.",
-      },
+      { error: "AI HOT is unavailable and the local product pool is empty." },
       { status: 503 },
     );
   }
-}
-
-function parseCandidate(value: unknown): Candidate | null {
-  if (!value || typeof value !== "object") return null;
-  const item = value as Record<string, unknown>;
-  if (
-    typeof item.id !== "string" ||
-    typeof item.title !== "string" ||
-    item.category !== "ai-products" ||
-    typeof item.permalink !== "string" ||
-    !item.permalink.startsWith("https://aihot.virxact.com/")
-  ) {
-    return null;
-  }
-  return {
-    id: item.id,
-    title: item.title.slice(0, 300),
-    summary: typeof item.summary === "string" ? item.summary.slice(0, 800) : null,
-    category: "ai-products",
-    publishedAt: typeof item.publishedAt === "string" ? item.publishedAt : null,
-    permalink: item.permalink,
-  };
+  const [automation, plan] = [
+    automaticCasePipelineStatus(),
+    await getPracticePlan(auth.user.userId),
+  ];
+  return Response.json(
+    {
+      completed: pool.items.filter((item) => item.status === "completed").map((item) => ({
+        id: item.sourceItemId,
+        title: item.title,
+        summary: item.summary,
+        source: item.sourceName,
+        publishedAt: item.publishedAt,
+        discoveredAt: item.discoveredAt,
+        permalink: item.aiHotUrl,
+        sourceUrl: item.originalUrl,
+        status: item.status,
+        fitScore: item.fitScore,
+        fitDimensions: item.fitDimensions,
+        fitReason: item.fitReason,
+      })),
+      pool: {
+        counts: pool.counts,
+        coverage: pool.coverage,
+        synced: syncResult.synced,
+        addedOrUpdated: syncResult.addedOrUpdated,
+        excluded: syncResult.excluded,
+        warning: syncWarning || null,
+      },
+      source: { name: "AI HOT", canonical: "https://aihot.virxact.com/" },
+      practicePlan: plan,
+      automation: {
+        ready: automation.ready,
+        status: automation.ready
+          ? "DeepSeek generation and the separate reviewer pass are ready."
+          : "The anonymous selected-product pool is saved locally. Case generation remains fail-closed until DEEPSEEK_API_KEY is configured.",
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

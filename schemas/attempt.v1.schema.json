@@ -42,7 +42,8 @@
       "properties": {
         "promptId": { "type": "string", "minLength": 1 },
         "selectedChoiceId": { "type": "string", "minLength": 1 },
-        "rationale": { "type": "string", "minLength": 1 }
+        "rationale": { "type": "string", "minLength": 1 },
+        "initialDirection": { "type": "string", "minLength": 1 }
       }
     }
   }

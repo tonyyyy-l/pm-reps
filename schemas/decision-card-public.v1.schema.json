@@ -12,6 +12,7 @@
     "case",
     "decision",
     "revisionSummary",
+    "comparison",
     "source"
   ],
   "properties": {
@@ -45,6 +46,15 @@
       }
     },
     "revisionSummary": { "type": "string", "minLength": 1 },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["whatCompanyChoseOrShipped", "note"],
+      "properties": {
+        "whatCompanyChoseOrShipped": { "type": "string", "minLength": 1 },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
     "source": {
       "type": "object",
       "additionalProperties": false,

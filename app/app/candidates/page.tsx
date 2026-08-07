@@ -8,12 +8,12 @@ export default function CandidatesPage() {
   return (
     <AppShell active="candidates">
       <header className="page-intro">
-        <p className="eyebrow">CASE INBOX · LIVE AI HOT</p>
-        <h1>Fresh product launches, held behind a review gate.</h1>
+        <p className="eyebrow">CASE INBOX · PRIVATE PRACTICE POOL</p>
+        <h1>A filtered pool that trains product judgment.</h1>
         <p>
-          The inbox reads the current selected AI product feed server-side. A
-          candidate cannot become a practice case until its source, evidence,
-          hidden outcome, and leakage check are reviewed.
+          PM Reps reads only AI HOT selected products, preflights their sources, and keeps
+          unseen identities hidden. Targeted practice chooses a dimension first, then randomly
+          draws a suitable launch; Surprise me samples the wider eligible pool.
         </p>
       </header>
       <CandidatesClient />

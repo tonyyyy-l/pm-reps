@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-reps.local/schemas/case-public.v2.schema.json",
+  "title": "PM Reps pre-commit case v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "caseId", "estimatedMinutes", "decisionType", "targetDimension", "difficulty", "corePromptId", "scenario", "evidence", "constraints", "prompts"],
+  "properties": {
+    "schemaVersion": { "const": "case-public.v2" },
+    "caseId": { "type": "string", "minLength": 1 },
+    "estimatedMinutes": { "type": "integer", "minimum": 1, "maximum": 30 },
+    "decisionType": { "const": "product_priority" },
+    "targetDimension": { "$ref": "#/$defs/dimension" },
+    "difficulty": { "enum": ["structured", "trade_off", "ambiguous"] },
+    "corePromptId": { "type": "string", "minLength": 1 },
+    "scenario": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "array", "minItems": 3, "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["evidenceId", "category", "provenance", "text"],
+        "properties": {
+          "evidenceId": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["trend", "behavior", "pain", "need", "risk", "metric", "constraint"] },
+          "provenance": { "enum": ["shipped_fact", "company_reported", "inference"] },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "constraints": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "prompts": {
+      "type": "array", "minItems": 2, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["promptId", "dimension", "question", "choices", "rationaleRequired", "initialDirectionRequired"],
+        "properties": {
+          "promptId": { "type": "string", "minLength": 1 },
+          "dimension": { "$ref": "#/$defs/dimension" },
+          "question": { "type": "string", "minLength": 1 },
+          "choices": {
+            "type": "array", "minItems": 3, "maxItems": 3,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["choiceId", "label"],
+              "properties": {
+                "choiceId": { "type": "string", "minLength": 1 },
+                "label": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "rationaleRequired": { "const": true },
+          "initialDirectionRequired": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dimension": { "enum": ["user_problem", "evidence_use", "metric_validity", "ai_system_awareness", "rollout_judgment"] }
+  }
+}

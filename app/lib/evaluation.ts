@@ -111,6 +111,9 @@ export async function evaluateAttempt(input: {
 }) {
   const apiKey = getDeepSeekKey();
   if (!apiKey) {
+    if (input.caseData.caseId !== "fixed-agent-workspace-001") {
+      throw new Error("Dynamic cases require the configured model evaluator.");
+    }
     return {
       evaluation: createRulesEvaluation(input),
       mode: "rules" as const,
@@ -360,7 +363,7 @@ async function evaluateWithDeepSeek(input: {
       evidence: input.caseData.evidence,
       constraints: input.caseData.constraints,
       prompts: input.caseData.prompts,
-      realOutcome: input.reveal.realOutcome,
+      whatCompanyChoseOrShipped: input.reveal.whatShipped,
     },
     learnerResponses: input.responses,
   });

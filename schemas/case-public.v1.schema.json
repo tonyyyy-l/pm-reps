@@ -29,10 +29,14 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["evidenceId", "kind", "text"],
+        "required": ["evidenceId", "category", "status", "text"],
         "properties": {
           "evidenceId": { "type": "string", "minLength": 1 },
-          "kind": { "type": "string", "enum": ["fact", "metric", "constraint"] },
+          "category": {
+            "type": "string",
+            "enum": ["trend", "behavior", "pain", "need", "risk", "metric", "constraint"]
+          },
+          "status": { "type": "string", "enum": ["fact", "inference"] },
           "text": { "type": "string", "minLength": 1 }
         }
       }

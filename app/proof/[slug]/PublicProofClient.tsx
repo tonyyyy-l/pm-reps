@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages -- Plain document navigation avoids the vinext client-hook failure previously observed in this project. */
+
 import { useEffect, useState } from "react";
 import type { DecisionCardSnapshot } from "../../lib/proof";
 
@@ -47,6 +49,13 @@ export function PublicProofClient({ slug }: { slug: string }) {
           <h2>What changed</h2>
           <p>{snapshot.revisionSummary}</p>
         </section>
+        {snapshot.comparison ? (
+          <section>
+            <h2>What the company chose or shipped</h2>
+            <p>{snapshot.comparison.whatCompanyChoseOrShipped}</p>
+            <small>{snapshot.comparison.note}</small>
+          </section>
+        ) : null}
         <footer>
           <span>Verified source</span>
           <a href={snapshot.source.canonicalUrl} rel="noreferrer" target="_blank">

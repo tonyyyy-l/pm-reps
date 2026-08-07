@@ -118,3 +118,93 @@
 - Deployment result: published the validated DeepSeek-ready build as a new owner-only Sites version with no model secret configured.
 - Next step: configure `DEEPSEEK_API_KEY` through hosted runtime settings, never Git, then run the planned live-model quality corpus before making model-quality claims.
 - Status: provider migration, GitHub privacy remediation, automated verification, and private deployment complete.
+
+## 2026-08-07 — Today redesign and independent automatic case verification completed locally
+
+- User feedback: group the sidebar into `Practice` and `Progress & Proof`; place the full case brief before the task; label evidence by analytical role; shorten E-04 to `Need`; remove the human case-review dependency and use an independent API reviewer.
+- Today surface: implemented the approved grouped navigation, three-step exercise flow, `Read the case brief` section, horizontal Scenario / Known Evidence / Constraints layout, evidence category plus `fact` or `inference` status, evidence insertion controls, and a single focused decision card.
+- Fixed-case evidence correction: E-02 is explicitly labeled `inference`; E-01, E-03, E-04, and E-05 remain `fact`. E-04 uses the short `need` category.
+- Candidate pipeline: AI HOT remains discovery-only. The server now preserves each linked original-source URL, rejects unsafe or unreadable sources, retrieves bounded text, and requires valid publication metadata.
+- Generation and review: DeepSeek V4 Flash creates a structured case draft with exact source quotations. Gemini 3.6 Flash independently classifies every claim and checks source fidelity, fabricated metrics, and pre-commit leakage. Deterministic checks then require exact quotation matches, valid labels, schema integrity, and a consistent reviewer pass.
+- Activation: only a fully passed case is stored as `active`; every missing credential, source failure, invalid model response, reviewer rejection, or deterministic mismatch preserves the existing active case. The fixed case remains the safe fallback.
+- Durable state: added `generated_cases` with owner-scoped case/source uniqueness and an index supporting latest-active-case lookup. Generated attempts, feedback, revisions, and Decision Cards now load their own stored case bundle rather than the fixed fixture.
+- Secrets: added empty `GEMINI_API_KEY` documentation beside the empty `DEEPSEEK_API_KEY`; no credential value was added. No GitHub push or deployment was performed in this change.
+- Verification: `npm test` passed 9 tests; production build and lint passed; all JSON schemas parsed; the D1 migration was generated and inspected; `EXPLAIN QUERY PLAN` used `idx_generated_owner_status_created`; live local AI HOT returned 8 candidates with original-source URLs and a fail-closed configuration state; current-tree scans found no credential, personal email, local personal path, or direct personal identifier.
+- Live-model limitation: neither server-side model credential is configured locally, so a real generated case and reviewer-quality baseline remain unavailable. The interface correctly disables activation and reports the fail-closed state.
+- Pitfall: using the public case ID as the D1 primary key would collide when two owners generate the same AI HOT item. Root cause: a public source-derived identifier is not globally unique for owner-scoped records. Resolution: use an internal random row ID and separate `(owner_id, case_id)` and `(owner_id, source_item_id)` unique indexes. Prevention rule: keep public/domain identifiers separate from owner-scoped persistence keys and verify the intended lookup index before migration generation.
+- Status: requested redesign and automatic dual-model verification are implemented and validated locally; hosted credential configuration and live quality evaluation remain next steps.
+
+## 2026-08-07 — Selected-product practice pool and random unseen selection completed locally
+
+- User decision: read only AI HOT selected AI products, save them locally before generation, keep only products that train product judgment, and randomly choose a product the learner has not done.
+- Source contract: migrated discovery to the AI HOT v1 selected `ai-products` endpoint with cursor pagination, canonical AI HOT and original-source links, ETag support, a one-minute minimum sync interval, and no legacy all-items mode.
+- Practice-fit gate: a product needs a valid publication time, at least 80 characters of summary material, coverage of at least two product dimensions, and a score of at least 75. Pure financing, stock, earnings, paper, benchmark, parameter-count, training-method, and minor-maintenance items are excluded unless they contain enough product-decision depth.
+- Durable state: added owner-scoped `candidate_product_pool` and `candidate_pool_sync_state` D1 tables. Repeated syncs refresh metadata without resetting active, completed, or rejected state.
+- Selection lifecycle: the next case is claimed with a database-random query from `queued` only, atomically changed to `generating`, activated only after DeepSeek generation plus independent Gemini review and deterministic gates, and marked `completed` only after the learner submits the post-feedback revision.
+- Interface: rebuilt Case Inbox around the saved practice pool, ability tags, pool counts, and one random-uncompleted action. Removed per-candidate manual activation and added a next-rep action after completion.
+- Local result: the current seven-day selected feed contained 25 products. Twelve failed the base practice gate and six more fell below the tightened score, leaving 7 locally saved, uncompleted practice candidates.
+- Verification: production build, lint, JSON parsing, and all 10 integration tests passed. The local pool API returned 7 queued items with scores from 80 to 95. SQLite query planning used `idx_pool_owner_status_fit` before the random sort. Browser checks confirmed the desktop hierarchy and a 390-pixel mobile viewport with no horizontal overflow.
+- Privacy and release boundary: tracked-tree scans found no credential-shaped value, personal email, personal local path, or direct personal identifier. No GitHub push or hosted deployment was performed.
+- Pitfall: an AI HOT `304 Not Modified` response initially preserved six rows that no longer passed the tightened filter. Root cause: ETag freshness describes source data, not the current application filter semantics. Resolution: every `304` path now re-evaluates existing queued rows and removes derived candidates that fail the current practice-fit rule. Prevention rule: when a persistent derived pool depends on versioned local rules, reconcile stored queued records even when the upstream payload is unchanged; never treat an upstream `304` as proof that derived state is current.
+- Status: selected-only ingestion, local practice filtering, durable random selection, no-repeat completion, UI, and local verification are complete. Live random case generation remains fail-closed until both private model credentials are configured.
+
+## 2026-08-07 — Product grilling decisions consolidated into PRD v2
+
+- User instruction: stop the product interview and update the existing PRD with every approved decision before any further implementation.
+- Product focus: PM Reps now prioritizes deliberate, weakness-targeted practice over unrestricted novelty. Randomness remains inside the eligible target pool, with a separate `Surprise me` action.
+- Calibration: the first five completed reps form a balanced calibration period. Skill patterns remain early signals until calibration completes.
+- Curriculum: post-calibration selection starts with a target judgment dimension, filters the local pool to suitable products, randomly claims one unseen candidate, and requires one verified core question for that target.
+- Learning model: first-pass judgment and revision response are separate signals. Revision must be re-evaluated, and revised performance cannot overwrite the original judgment.
+- Feedback governance: the learner may dispute one evaluation dimension. Disputed and low-confidence observations cannot control adaptive selection.
+- Difficulty: approved `Structured`, `Trade-off`, and `Ambiguous` levels, with performance interpreted in difficulty context rather than averaged as equivalent observations.
+- Question design: cases contain two to four evidence-supported questions. The core question collects an initial direction before revealing three credible, non-dominated options; obvious distractors and answer cues fail review.
+- Leakage controls: uncompleted candidate identities are hidden, recognized launches can be replaced without penalty, and the case generator sees only isolated decision-time evidence rather than the company's final choice.
+- Evidence and reveal: evidence distinguishes `Shipped fact`, `Company-reported`, and `Inference`. Reveal compares `Your decision` with `What the company chose or shipped`; post-launch market tracking is explicitly out of scope.
+- Model boundary: remove the planned Gemini dependency. One private DeepSeek integration performs distinct isolated evidence, generation, review, and learner-evaluation operations, followed by deterministic gates. Product copy must say `separate reviewer pass`, not independent or cross-provider review.
+- Failure experience: source readability is preflighted and one start request may automatically replace up to three failed candidates before showing an error.
+- Documentation: replaced the outdated Step 1 MVP PRD with a coherent v2 document containing updated principles, core flow, curriculum, AI behavior, functional requirements, acceptance criteria, non-goals, metrics, and an explicit current-implementation gap table.
+- Scope boundary: this checkpoint changes only `docs/product-requirements.md` and project progress. No product code, credential, GitHub remote, or hosted deployment was changed.
+- Verification: `git diff --check` passed; all approved decisions are represented in the PRD; the document contains no credential value, personal email, personal local path, or direct personal identifier.
+- Status: PRD v2 is complete and ready for implementation planning when requested.
+
+## 2026-08-07 — PRD v2 deliberate-practice implementation completed locally
+
+- User authorization: implement the approved PRD in one pass. This checkpoint is local-only; no GitHub push, hosted deployment, or credential configuration was performed.
+- Curriculum: added a five-rep balanced calibration period, first-pass weakness routing, gradual `structured` / `trade_off` / `ambiguous` difficulty, target-first candidate filtering, and a separate unrestricted `Surprise me` path.
+- Practice signals: persisted first-pass and revision-response observations separately with confidence and difficulty context. Added dimension disputes and excluded disputed or low-confidence first-pass observations from adaptive routing.
+- Exercise contract: introduced `case-public.v2` and `case-reveal.v2`, two-to-four questions, one target-dimension core prompt, a required initial direction before choices appear, exactly three plausible options, and `shipped_fact` / `company_reported` / `inference` provenance.
+- Feedback and proof: revisions are evaluated again without overwriting the original evaluation. Feedback shows both signals, and Decision Cards compare the learner's result with what the company chose or shipped without post-launch market tracking.
+- Candidate privacy: queued identities are no longer returned to the browser. Case Inbox shows anonymous dimension coverage and reveals titles and sources only for completed products. Recognized launches become `seen`, create no skill evidence, and trigger an automatic replacement.
+- Source and model pipeline: selected-only AI HOT ingestion now preflights original sources. One DeepSeek credential powers isolated evidence extraction, blind generation, a separate reviewer pass, and response evaluation through distinct prompts and contracts; all Gemini configuration and runtime calls were removed.
+- Failure handling: one start request can replace up to three source or quality failures before returning a learner-safe error. Failed candidates never affect attempts or Skill Map evidence.
+- Persistence: added revision evaluations, signal metadata, source-preflight timestamps, and `evaluation_disputes`; generated and inspected `drizzle/0003_vengeful_power_pack.sql`; runtime schema upgrades add missing columns before creating the replacement composite index.
+- Verification checkpoint: the production build completed and the updated integration suite passed all 10 tests, including commit/reveal, separate revision evaluation, dispute exclusion, Skill Map dual signals, reversible proof, fail-closed DeepSeek configuration, migrations, and no Gemini dependency.
+- Status: PRD v2 product behavior is implemented locally; final lint, schema parsing, privacy scan, and regression rerun remain before handoff.
+
+## 2026-08-07 — PRD v2 final local verification passed
+
+- Regression: `npm test` rebuilt the production Worker and passed all 10 integration tests.
+- Static checks: ESLint passed; `git diff --check` passed; every JSON file under `schemas`, `.openai`, and `drizzle/meta` parsed successfully.
+- Privacy and credential scan: no credential-shaped value, personal email, personal local path, or direct personal identifier was found outside the test scanner's own literal patterns. The only documented environment assignment remains an empty `DEEPSEEK_API_KEY=` placeholder.
+- Release boundary: no GitHub staging, commit, push, repository mutation, hosted secret configuration, or deployment was performed.
+- Runtime boundary: no live DeepSeek request was attempted because no local key is configured. Automatic generation remains deliberately fail-closed, while the fixed case and deterministic fixed-case evaluator remain usable.
+- Status: local PRD v2 implementation and verification are complete.
+
+## 2026-08-07 — July selected-product history backfilled into the local pool
+
+- User request: expand the small practice pool with every currently selected AI HOT product news item from July 2026 onward that is suitable for product-judgment practice.
+- Source boundary: interpreted the user's `AI House` reference as the established AI HOT source. Used the anonymous read-only v1 selected snapshot with `fields=default`, completed all pages under one stable snapshot cursor, and did not use `mode=all`.
+- Time boundary: applied the AI HOT timeline rule from `2026-07-01T00:00:00+08:00`; recent items use discovery time while historical backfills delayed by more than 72 hours use publication time.
+- Reusable capability: added an authenticated, same-origin historical backfill route and a snapshot client. Routine seven-day sync remains unchanged; explicit backfills reuse the exact same practice-fit scoring, owner scoping, status preservation, and original-source preflight.
+- Actual local result: inspected 3,186 currently selected snapshot items, including 812 selected product items across the full snapshot and 185 selected product items in the July-to-current range. Saved or refreshed 56 practice-fit, source-readable products; excluded 111 for insufficient exercise value and 18 for unreadable or insufficient original sources.
+- Pool verification: the local dogfood pool now contains 56 queued unseen cases. Coverage is 49 user/problem, 51 evidence use, 11 metrics/evals, 21 AI-system awareness, and 49 rollout judgment; one product may cover multiple dimensions.
+- Privacy: the browser API still returns only anonymous queued counts and coverage. Product titles and sources remain hidden until completion.
+- Release boundary: local D1 only; no GitHub push or hosted deployment was performed.
+- Status: historical July backfill completed successfully; final automated regression remains before handoff.
+
+## 2026-08-07 — July backfill final verification passed
+
+- Regression: production build and all 10 integration tests passed with the new historical backfill route included.
+- Static checks: ESLint and `git diff --check` passed; the privacy scan found no credential-shaped value, personal email, personal local path, or direct personal identifier.
+- Durable-state proof: a fresh anonymous Case Inbox read from the existing local development server returned exactly 56 queued items and the full-pool dimension coverage recorded above; no queued title or source was present in the browser payload.
+- Status: July-to-current selected-product pool expansion is complete and locally verified.

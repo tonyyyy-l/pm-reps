@@ -36,22 +36,22 @@ Keep a transparent rules evaluator so the product remains usable without a model
 
 ### Source decision
 
-Use AI HOT only as a current candidate inbox. Treat summaries as untrusted, preserve attribution, and require human source verification before activation.
+Use AI HOT only as a selected-product discovery source. Preflight and save practice-fit products into an anonymous private pool, target a judgment dimension, then randomly claim an unseen eligible item. DeepSeek isolates evidence, generates without seeing the shipped choice, and performs a separate reviewer pass before deterministic checks.
 
 ## Suggested demo sequence
 
 1. Open Today's Rep and show that company and outcome are absent.
-2. Complete four decisions and commit.
-3. Reveal the real launch and official source.
+2. Write the core initial direction, complete two to four decisions, and commit.
+3. Compare the original decision with what the company chose or shipped.
 4. Generate five-dimension evidence feedback.
 5. Revise one rationale and complete the rep.
 6. Show the completed-only Skill Map update.
 7. Preview, publish, open, and unpublish the Decision Card.
-8. Open Case Inbox to explain the human review gate for current AI product launches.
+8. Open Case Inbox to explain anonymous deliberate-practice routing, the separate reviewer pass, and deterministic evidence gates.
 
 ## Honest boundaries to state
 
-- The private release has one active manually verified case.
+- The private release keeps one fixed fallback case and can rotate to an automatically verified case only when every gate passes.
 - The current deployed evaluator uses the labeled rules baseline unless a model credential is configured.
 - Model consistency and bilingual quality are not yet claimed because those baselines are unavailable.
 - The next product milestone is evidence collection, not adding more dashboard features.
